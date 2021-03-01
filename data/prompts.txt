@@ -1,0 +1,7 @@
+shebangr@Enter an option:
+shebangr/webdev@Enter a specific field of webdev:
+shebangr/webdev/webapp@Enter desired programming language:
+shebangr/webdev/cloud@Enter desired platform:
+shebangr/webdev/webapp/python@Enter a framework:
+shebangr/hacking@Enter a specific type of exploitation:
+shebangr/hacking/remotex@Enter the desired kind of remote exploitation:
