@@ -86,6 +86,8 @@ function _init_prompts() {
 
 function _source_all_rec() {
     ### utility function to recursively source all .sh files at or below a given sourcepath ###
+    SAVED_IFS=$IFS
+    IFS=$'\n'
     for filename in $(ls -R $1 | grep .sh$)
     do
         script="$(find $1 -name $filename)"
@@ -95,6 +97,7 @@ function _source_all_rec() {
         _get_fnames "$script"
         source "$script"
     done
+    IFS=$SAVED_IFS
 }
 
 function _sourcery() {
@@ -114,16 +117,17 @@ function _get_fnames() {
     # this function is called on any sourced .sh file in order to record a list of sourced functions, thus renderered available to the user as simple command line commands
     SAVED_IFS=$IFS
     IFS=$'\n'
-
     for fline in $(cat "$1" | grep function)
     do
         IFS=$SAVED_IFS
+        
         if [[ $(echo "$fline" | cut  -d" " -f1) == "function" ]]
         then
             fname=$(echo "$fline" | cut  -d" " -f2) 
             fname=${fname%\(*)}
-            if [[ ! " ${func_names[@]} " =~ " ${fname} " ]]; then
-                func_names+=("$fname")
+            
+            if [[ ! " ${func_names[@]} " =~ " ${fname} " ]] && [[ ! "$fname" == _* ]]; then
+                func_names+=("$fname  (from '${1#*shebangr/}')")
             fi
         fi
     done
