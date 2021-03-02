@@ -15,8 +15,11 @@ function _configure_from_input() {
     fi
 
     # print the options availabe to user at the given sourcepath level by checking what files are contained one level below the given sourcepath directory
+    SAVED_IFS=$IFS
+    IFS=$'\n'
     for option in $(ls -f "$sourcepath"/*.sh ); do echo "- $(basename $option .sh)"; done
     printf "%s\n\n" "- all"
+    IFS=$SAVED_IFS
 
     # prompt for user input
     read -p "${prompts[$sourcepath]} " input
@@ -126,58 +129,31 @@ function _get_fnames() {
     done
 }
 
-function _configure_from_args() {
-    ### function to parse args and source appropriate files if any ###
-    if [[ "$#" -gt 0 ]]; then
-        args=true
-    fi
+function _parse_args() {
+    ### function to parse args if any ###
 
-    while [ "$#" -gt 0 ] 
-    do
+    if [[ "$#" -eq 1 ]] ; then
+        interactive=false
         case "$1" in
         -h|--help)
             printf "\n%s\n" "Shebangr - a simpler, conceptual interface for running bash commands"
             printf "\n%s\n" "Simply use the interactive prompt by calling 'shebangr' on its own"
-            printf "\n%s\n\n" "Or provide predefined source options as below:"
-
-            printf "%s\n\n" "shebangr -s arg1 arg2 arg3..."
-            printf "%s\n\n" "Available options are: "
+            printf "\n%s\n\n" "Available options are: "
             ### display options ###
-            for option in $(find shebangr | grep .sh$); do option_name="$(basename $(echo $option | cut -f1 -d'.'))"; echo "- $option_name"; done
-
-            return
-        ;;
-        -s|--source)
-            shift
-            message="Sourcing all files relating to chosen domain(s), standby..."
-            printf "\n%s\n" "$message"
-            while [ "$#" -gt 0 ]
-            do  
-                # find either dir or .sh file and exit after first match
-                sourcepath="$(find shebangr -name $1 -o -name $1.sh -print -quit)"
-                if [[ "$sourcepath" == "" ]]; then
-                    echo "Warning: cannot find option '$1'"
-                    shift
-                    continue
-                else
-                    # if sourcepath ends in '.sh', then remove file extension
-                    if [[ "$sourcepath" =~ .sh$ ]]; then sourcepath="$(echo $sourcepath | grep .sh$ | cut -f1 -d'.')"; fi
-                    _sourcery "$sourcepath"
-                    if [[ -d "$sourcepath" ]]; then _source_all_rec "$sourcepath"; fi
-                    shift
-                fi
-            done
-            return
-        ;;
-      *)
-        echo "Error: unrecognized flag...exiting"
-        echo "Usage: shebangr -s arg1 arg2 arg3..."
-        echo "Or alternatively, just simply type 'shebangr' to enter interactive mode!"
-        return
-        ;;
-      esac
-    done
-
+            for option in $(find shebangr | grep .sh$); do option_name="$(basename $(echo $option | cut -f1 -d'.'))"; echo "- $option_name : ($(dirname $option | sed 's/\// => /g'))"; done
+            ;;
+        *)
+            echo "Error: unrecognized flag...exiting"
+            echo "For help just enter: shebangr -h"
+            echo "Or alternatively, simply type 'shebangr' to start interactive mode!"
+            ;;
+        esac
+    elif [[ "$#" -gt 1 ]]; then
+        echo "Error: too many arguments"
+        echo "For help just enter: shebangr -h"
+        echo "Or alternatively, simply type 'shebangr' to start interactive mode!"
+        interactive=false
+    fi
 }
 
 function _display_commands() {
@@ -199,18 +175,11 @@ function shebangr() {
     declare -A prompts=()
     # initialize empty array to hold names of functions sourced during input loop
     declare -a func_names=()
-    
-    # try to configure shebangr from command line args
-    args=false
-    _configure_from_args "$@"
-    # if command line configuration was successful, then global 'args' variable will have been set to true and we display sourced commands and exit
-    # otherwise we continue to our main recursive function for reading input from the user
-    if [[ "$args" = true ]]; then
-        if [ ! ${#func_names[@]} -eq 0 ]; then
-            _display_commands
-        fi
-        return
-    fi
+    interactive=true
+    _parse_args "$@"
+
+    if [[ ! "$interactive" = true ]]; then return; fi
+
     # populate prompts hashmap from disk
     _init_prompts
     # begin main recursive input function
